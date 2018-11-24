@@ -141,32 +141,89 @@ public class DiverMax extends SewerDiver {
     	coinGrab(state);
     }
     
-    //private HashSet<Long> coinSearched = new HashSet<Long>();
+    private HashSet<Node> coinSearched = new HashSet<Node>();
+    private Stack<Node> search_path = new Stack<Node>();
     
-    private void coinGrab(GetOutState state) {
-    	List<Node> retlist = Paths.shortestPath(state.currentNode(), state.getExit());
-    	System.out.println(Paths.pathDistance(retlist) + " current distance to exit");
-    	System.out.println(state.stepsLeft() + " steps left");
-    	if (Paths.pathDistance(retlist) + 20 > state.stepsLeft()) {
-    		retlist.forEach(n -> state.moveTo(n));
-    		return;
-    	}
-    	
-    	Set<Node> nbs = state.currentNode().getNeighbors();
+    /*
+     * return Node of nearest unvisited neighbor. return null if all
+     * neighbors visitedd.
+     **/
+    private Node nearest(GetOutState state, Set<Node> nbs) {
     	Node closest = null;
     	int min = 100;
     	for (Node n : nbs) {
-    		if (n.getEdge(state.currentNode()).length < min) {
+    		if (n.getEdge(state.currentNode()).length < min && !coinSearched.contains(n)) {
     			closest = n;
     			min = n.getEdge(state.currentNode()).length;
     		}
     	}
-    	state.moveTo(closest);
+    	return closest;
+    }
+    
+    /*
+     * return Node of a neighbor with coins on it. if no neighbor has coins,
+     * call 'nearest' and return Node of nearest unvisited neighbor.
+     * return null if all neighbors visited.
+     ***/
+    private Node nearestCoin(GetOutState state, Set<Node> nbs) {
+    	Node closest = null;
+    	for (Node n : nbs) {
+    		//if (n.getTile().coins()>0 && !coinSearched.contains(n)) {
+    		if (n.getTile().coins()>0) {
+    			closest = n;
+    		}
+    	}
+    	if (closest == null) closest = nearest(state, nbs);
+    	return closest;
+    }
+    
+    private void coinGrab(GetOutState state) {
+    	int margin = 20;
+    	List<Node> retlist = Paths.shortestPath(state.currentNode(), state.getExit());
+    	//System.out.println(Paths.pathDistance(retlist) + " current distance to exit");
+    	//System.out.println(state.stepsLeft() + " steps left");
+    	if (Paths.pathDistance(retlist) + margin > state.stepsLeft()) {
+    		retlist.remove(state.currentNode());
+    		retlist.forEach(n -> state.moveTo(n));
+    		return;
+    	}
+    	
+    	
+    	coinSearched.add(state.currentNode());
+    	Set<Node> nbs = state.currentNode().getNeighbors();
+    	Node closest = nearestCoin(state, nbs);
+    	if (closest!=null) {
+    		search_path.add(state.currentNode());
+    		// this commented-out stuff, when included, prevents the player
+    		// from running out of steps. Usually.
+    		// It works by finding out whether moving to the nearest neighbor
+    		// would place the player "too far away".
+    		// However, I don't feel like I implemented it very neatly.
+    		// A better solution might check all neighbors, starting with the
+    		// one returned by nearestCoin.
+    		
+    		/*
+    		retlist.add(0, closest);
+    		int hypotheticalDistance = Paths.pathDistance(retlist);
+    		int hypotheticalStepsLeft = state.stepsLeft() - closest.getEdge(state.currentNode()).length;
+    		if (hypotheticalDistance + margin > hypotheticalStepsLeft) {
+    			retlist.remove(state.currentNode());
+    			retlist.remove(closest);
+        		retlist.forEach(n -> state.moveTo(n));
+        		return;
+    		} else {
+    		*/
+        		state.moveTo(closest);
+        	/*
+    		}
+    		*/
+    	}
+    	
+    	else {
+    		state.moveTo(search_path.pop());
+    	}
     	coinGrab(state);
     	
-    	//while (state.stepsLeft() < state.)
-    	//retlist.forEach(n -> state.moveTo(n));
-
     }
     
 }
