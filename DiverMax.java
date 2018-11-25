@@ -173,23 +173,30 @@ public class DiverMax extends SewerDiver {
     		if (n.getTile().coins()>0) {
     			closest = n;
     		}
-    		/**/
-    		for (Node nNbs : n.getNeighbors()) {
-    			if (nNbs.getTile().coins()>0 && !visitedGetOut.contains(nNbs)) {
-        			closest = n;
-        			visitedGetOut.add(nNbs);
-        			System.out.println("nNbs");
-        		}
-    		}
-
-    		/**/
     	}
-    	if (closest == null) closest = nearest(state, nbs);
+    	/**/
+    	// bad seed -8209986781353465035
+    	if (closest == null) {
+    		for (Node n : nbs) {
+	    		for (Node nNbs : n.getNeighbors()) {
+	    			if (nNbs.getTile().coins()>0 && n.getEdge(nNbs).length <20 && !visitedGetOut.contains(nNbs)&& !visitedGetOut.contains(n)) {
+	        			closest = n;
+	        			if (closest.getEdge(state.currentNode()).length >30 /*nearest(state, nbs).getEdge(state.currentNode()).length*/)
+	        				closest=nearest(state, nbs);
+		        		visitedGetOut.add(nNbs);
+		        		visitedGetOut.add(n);
+		        		//System.out.println("nNbs");
+	        		}
+	    		}
+    		}
+    	}
+    	/**/
+    	//if (closest == null) closest = nearest(state, nbs);
     	return closest;
     }
 
     private void coinGrab(GetOutState state) {
-    	int margin = 20;
+    	int margin = 30;	// changed from 20 to 30 because ran out of steps in seed 7171721301712947436
     	List<Node> retlist = Paths.shortestPath(state.currentNode(), state.getExit());
     	//System.out.println(Paths.pathDistance(retlist) + " current distance to exit");
     	//System.out.println(state.stepsLeft() + " steps left");
@@ -213,7 +220,7 @@ public class DiverMax extends SewerDiver {
     		// A better solution might check all neighbors, starting with the
     		// one returned by nearestCoin.
 
-
+    		/*
     		retlist.add(0, closest);
     		int hypotheticalDistance = Paths.pathDistance(retlist);
     		int hypotheticalStepsLeft = state.stepsLeft() - closest.getEdge(state.currentNode()).length;
@@ -223,11 +230,11 @@ public class DiverMax extends SewerDiver {
         		retlist.forEach(n -> state.moveTo(n));
         		return;
     		} else {
-
+    		*/
         		state.moveTo(closest);
-
+        	/*
     		}
-
+    		*/
     	}
 
     	else {
