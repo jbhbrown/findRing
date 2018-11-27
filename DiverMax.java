@@ -190,8 +190,8 @@ public class DiverMax extends SewerDiver {
 	    		}
     		}
     	}
-    	/**/
-    	//if (closest == null) closest = nearest(state, nbs);
+    	///**/
+    	if (closest == null) closest = nearest(state, nbs);
     	return closest;
     }
 
