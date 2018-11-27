@@ -53,14 +53,14 @@ public class DiverMax extends SewerDiver {
     }
 
     private HashSet<Long> visited = new HashSet<Long>();
-
-    private Stack<Long> path = new Stack<Long>();
+    // Maintain a set of id's for the nodes that the recursive dfs has visited
 
     boolean Found = false;
-
+    // The value of: "Max has found the ring"
 
     /*
-     *
+     * Perform a dfs in search of the ring, with bias toward nodes that are
+     * closer to the ring. Return when Max reaches the ring.
      */
 	private void dfs(FindState state) {
 		long current = state.currentLocation();
@@ -72,40 +72,15 @@ public class DiverMax extends SewerDiver {
 		for (NodeStatus n : nbs) {
 			if (Found) {return;}
 			if (!visited.contains(n.getId())) {
-				path.add(state.currentLocation());
 				state.moveTo(n.getId());
 				if (state.distanceToRing() == 0) {
 					Found = true;
 					return;
 				}
 				dfs(state);
-				if (!Found) state.moveTo(path.pop());
-				//if (!Found) state.moveTo(current);
-			}
-
-		}
-
-		/*
-		if (nbs.size() ==1) {
-			state.moveTo(nbs.get(0).getId()); dfs(state, nbs.get(0).getId());
-		}
-		else if (state.neighbors().size() == 2) {
-			if (! visited.contains(nbs.get(0).getId())) {
-				state.moveTo(nbs.get(0).getId()); dfs(state, nbs.get(0).getId());
-			}
-			else {
-				state.moveTo(nbs.get(1).getId()); dfs(state, nbs.get(1).getId());
+				if (!Found) state.moveTo(current);
 			}
 		}
-		*/
-
-
-
-		/*
-		Visit u;
-		for each neighbor w of u:
-			if (w is not visited) dfs(w);
-		*/
 	}
 
 
@@ -142,10 +117,13 @@ public class DiverMax extends SewerDiver {
     }
 
     private HashSet<Node> coinSearched = new HashSet<Node>();
+    // Maintain a set of Nodes that have been visited (during the get-out phase).
+    
     private Stack<Node> search_path = new Stack<Node>();
+    // Maintain a Stack of Nodes newly visited (during the get-out phase).
 
     /*
-     * return Node of nearest unvisited neighbor. return null if all
+     * Return Node of nearest unvisited neighbor. Return null if all
      * neighbors visited.
      **/
     private Node nearest(GetOutState state, Set<Node> nbs) {
@@ -160,88 +138,61 @@ public class DiverMax extends SewerDiver {
     	return closest;
     }
 
-    /*
-     * return Node of a neighbor with coins on it. if no neighbor has coins,
-     * call 'nearest' and return Node of nearest unvisited neighbor.
-     * return null if all neighbors visited.
-     ***/
+    /* Find the nearest neighbor node with a coin on it. If no neighbor has
+     * a coin, search for a neighbor node with a neighboring coin. If this
+     * second-degree neighbor is too far from exit, call 'nearest' and return
+     * that node.
+     **/
     private Node nearestCoin(GetOutState state, Set<Node> nbs) {
     	HashSet<Node> visitedGetOut = new HashSet<Node>();
     	Node closest = null;
     	for (Node n : nbs) {
-    		//if (n.getTile().coins()>0 && !coinSearched.contains(n)) {
     		if (n.getTile().coins()>0) {
     			closest = n;
     		}
     	}
-    	/**/
-    	// bad seed -8209986781353465035
     	if (closest == null) {
     		for (Node n : nbs) {
 	    		for (Node nNbs : n.getNeighbors()) {
-	    			if (nNbs.getTile().coins()>0 && n.getEdge(nNbs).length <20 && !visitedGetOut.contains(nNbs)&& !visitedGetOut.contains(n)) {
+	    			if (nNbs.getTile().coins()>0 && n.getEdge(nNbs).length <20
+	    					&& !visitedGetOut.contains(nNbs)&& !visitedGetOut.contains(n)) {
 	        			closest = n;
-	        			if (closest.getEdge(state.currentNode()).length >30 /*nearest(state, nbs).getEdge(state.currentNode()).length*/)
+	        			if (closest.getEdge(state.currentNode()).length >30)
 	        				closest=nearest(state, nbs);
 		        		visitedGetOut.add(nNbs);
 		        		visitedGetOut.add(n);
-		        		//System.out.println("nNbs");
 	        		}
 	    		}
     		}
     	}
-    	///**/
     	if (closest == null) closest = nearest(state, nbs);
     	return closest;
     }
 
+    /*
+     * Perform DFS in sewer, optimizing for high coin retrieval. Uses a margin 
+     * 30 steps to ensure that Max does not run out of steps before being able
+     * to exit. Once steps remaining gets within the 30-step margin of the distance
+     * to the sewer exit, plot the optimal path to the exit, and exit.
+     **/
     private void coinGrab(GetOutState state) {
-    	int margin = 30;	// changed from 20 to 30 because ran out of steps in seed 7171721301712947436
+    	int margin = 30;
     	List<Node> retlist = Paths.shortestPath(state.currentNode(), state.getExit());
-    	//System.out.println(Paths.pathDistance(retlist) + " current distance to exit");
-    	//System.out.println(state.stepsLeft() + " steps left");
     	if (Paths.pathDistance(retlist) + margin > state.stepsLeft()) {
     		retlist.remove(state.currentNode());
     		retlist.forEach(n -> state.moveTo(n));
     		return;
     	}
-
-
     	coinSearched.add(state.currentNode());
     	Set<Node> nbs = state.currentNode().getNeighbors();
     	Node closest = nearestCoin(state, nbs);
     	if (closest!=null) {
     		search_path.add(state.currentNode());
-    		// this commented-out stuff, when included, prevents the player
-    		// from running out of steps. Usually.
-    		// It works by finding out whether moving to the nearest neighbor
-    		// would place the player "too far away".
-    		// However, I don't feel like I implemented it very neatly.
-    		// A better solution might check all neighbors, starting with the
-    		// one returned by nearestCoin.
-
-    		/*
-    		retlist.add(0, closest);
-    		int hypotheticalDistance = Paths.pathDistance(retlist);
-    		int hypotheticalStepsLeft = state.stepsLeft() - closest.getEdge(state.currentNode()).length;
-    		if (hypotheticalDistance + margin > hypotheticalStepsLeft) {
-    			retlist.remove(state.currentNode());
-    			retlist.remove(closest);
-        		retlist.forEach(n -> state.moveTo(n));
-        		return;
-    		} else {
-    		*/
-        		state.moveTo(closest);
-        	/*
-    		}
-    		*/
+    		state.moveTo(closest);
     	}
-
     	else {
     		state.moveTo(search_path.pop());
     	}
     	coinGrab(state);
-
     }
-
 }
